@@ -23,7 +23,6 @@
 
 package org.billthefarmer.gurgle;
 
-import android.app.ActionBar;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
@@ -48,6 +47,7 @@ import android.text.InputType;
 import android.text.SpannableStringBuilder;
 import android.text.method.LinkMovementMethod;
 import android.util.Log;
+import android.util.TypedValue;
 import android.view.ActionMode;
 import android.view.ContextMenu;
 import android.view.Gravity;
@@ -55,11 +55,15 @@ import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
+import android.widget.ImageView;
+import android.widget.PopupMenu;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.widget.Toolbar;
 
 import android.support.v4.content.FileProvider;
 
@@ -90,11 +94,22 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import nl.dionsegijn.konfetti.core.Angle;
+import nl.dionsegijn.konfetti.core.Party;
+import nl.dionsegijn.konfetti.core.PartyFactory;
+import nl.dionsegijn.konfetti.core.Spread;
+import nl.dionsegijn.konfetti.core.emitter.Emitter;
+import nl.dionsegijn.konfetti.core.emitter.EmitterConfig;
+import nl.dionsegijn.konfetti.xml.KonfettiView;
+
 // Gurgle class
+@SuppressWarnings("deprecation")
 public class Gurgle extends Activity
+    implements PopupMenu.OnMenuItemClickListener
 {
     public static final String TAG = "Gurgle";
     public static final String ROW = "row";
@@ -116,10 +131,12 @@ public class Gurgle extends Activity
     public static final String TEXT_PLAIN = "text/plain";
     public static final String PREF_THEME = "pref_theme";
     public static final String PREF_WRONG = "pref_wrong";
-    public static final String PREF_LANG = "pref_lang";
+    public static final String PREF_CONF = "pref_conf";
     public static final String PREF_CONT = "pref_cont";
     public static final String PREF_CORR = "pref_corr";
     public static final String PREF_FARE = "pref_fare";
+    public static final String PREF_LANG = "pref_lang";
+    public static final String PREF_SWAP = "pref_swap";
 
     public static final String FILE_PROVIDER =
         "org.billthefarmer.gurgle.fileprovider";
@@ -129,8 +146,8 @@ public class Gurgle extends Activity
     public static final String E_ACCENTS[] = {"E", "È", "É", "Ê"};
     public static final String I_ACCENTS[] = {"I", "Ì", "Í", "Î"};
     public static final String N_ACCENTS[] = {"N", "Ñ"};
-    public static final String O_ACCENTS[] = {"O", "Ò", "Ó", "Ô"};
-    public static final String U_ACCENTS[] = {"U", "Ù", "Ú", "Û"};
+    public static final String O_ACCENTS[] = {"O", "Ò", "Ó", "Ô", "Ö", "Ő"};
+    public static final String U_ACCENTS[] = {"U", "Ù", "Ú", "Û", "Ü", "Ű"};
 
     public static final int GREY    = 0;
     public static final int DARK    = 1;
@@ -148,11 +165,6 @@ public class Gurgle extends Activity
 
     public static final int REQUEST_IMAGE = 1;
 
-    public static final int KEYBOARD[] =
-    {
-        R.id.keys1, R.id.keys2, R.id.keys3
-    };
-
     public static final int ENGLISH    = 0;
     public static final int ITALIAN    = 1;
     public static final int SPANISH    = 2;
@@ -161,6 +173,8 @@ public class Gurgle extends Activity
     public static final int PORTUGUESE = 5;
     public static final int GERMAN     = 6;
     public static final int DUTCH      = 7;
+    public static final int AFRIKAANS  = 8;
+    public static final int HUNGARIAN  = 9;
 
     public static final int SIZE = 5;
     public static final int ROWS = 6;
@@ -168,21 +182,27 @@ public class Gurgle extends Activity
     public static final int VERSION_CODE_S_V2 = 32;
 
     public static final int BITMAP_SCALE = 8;
-    public static final int LOOP_DELAY = 5000;
+    public static final int SWAP_DELAY = 100;
 
     private MediaPlayer mediaPlayer;
 
     private ActionMode.Callback actionModeCallback;
     private Map<String, TextView> keyboard;
+    private KonfettiView konfettiView;
     private ActionMode actionMode;
     private TextView display[][];
     private TextView actionView;
-    private boolean locked[];
+    private Toolbar toolbar;
     private Toast toast;
     private String word;
+    private Party party;
 
+    private boolean confetti;
     private boolean fanfare;
+    private boolean locked[];
     private boolean solved;
+    private boolean swap;
+
     private int language;
     private int contains;
     private int correct;
@@ -193,7 +213,6 @@ public class Gurgle extends Activity
 
     // On create
     @Override
-    @SuppressWarnings("deprecation")
     public void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
@@ -201,12 +220,14 @@ public class Gurgle extends Activity
         SharedPreferences preferences =
             PreferenceManager.getDefaultSharedPreferences(this);
 
-        theme = preferences.getInt(PREF_THEME, DARK);
-        wrong = preferences.getInt(PREF_WRONG, getColour(GREY));
-        language = preferences.getInt(PREF_LANG, ENGLISH);
+        confetti = preferences.getBoolean(PREF_CONF, true);
         contains = preferences.getInt(PREF_CONT, getColour(YELLOW));
         correct = preferences.getInt(PREF_CORR, getColour(GREEN));
         fanfare = preferences.getBoolean(PREF_FARE, true);
+        language = preferences.getInt(PREF_LANG, ENGLISH);
+        swap = preferences.getBoolean(PREF_SWAP, false);
+        theme = preferences.getInt(PREF_THEME, DARK);
+        wrong = preferences.getInt(PREF_WRONG, getColour(GREY));
 
         switch (theme)
         {
@@ -248,13 +269,27 @@ public class Gurgle extends Activity
 
         setLanguage();
 
-        keyboard = new HashMap<String, TextView>();
-        for (int id: KEYBOARD)
+        // Find toolbar
+        toolbar = findViewById(getResources().getIdentifier("action_bar",
+                                                            "id", "android"));
+        // Set up navigation
+        toolbar.setNavigationIcon(R.drawable.ic_menu_white_24dp);
+        toolbar.setNavigationOnClickListener((v) ->
         {
-            ViewGroup group = (ViewGroup) findViewById(id);
-            for (int i = 0; i < group.getChildCount(); i++)
+            PopupMenu popup = new PopupMenu(this, v);
+            popup.inflate(R.menu.navigation);
+            popup.setOnMenuItemClickListener(this);
+            popup.show();
+        });
+
+        keyboard = new HashMap<String, TextView>();
+        ViewGroup rows = findViewById(R.id.keyboard);
+        for (int r = 0; r < rows.getChildCount(); r++)
+        {
+            ViewGroup row = (ViewGroup) rows.getChildAt(r);
+            for (int i = 0; i < row.getChildCount(); i++)
             {
-                View view = group.getChildAt(i);
+                View view = row.getChildAt(i);
                 if (view instanceof TextView)
                 {
                     view.setOnClickListener((v) -> keyClicked(v));
@@ -264,16 +299,24 @@ public class Gurgle extends Activity
             }
         }
 
-        View view = findViewById(R.id.enter);
-        view.setOnClickListener((v) -> enterClicked(v));
+        ImageView view = findViewById(R.id.enter);
+        view.setImageResource(swap? R.drawable.ic_backspace_white_24dp:
+                                    R.drawable.ic_keyboard_return_white_24dp);
+        view.setOnClickListener(swap? (v) -> backspaceClicked(v):
+                                      (v) -> enterClicked(v));
+        view.setOnLongClickListener((v) -> swap(v));
         view = findViewById(R.id.back);
-        view.setOnClickListener((v) -> backspaceClicked(v));
+        view.setImageResource(swap? R.drawable.ic_keyboard_return_white_24dp:
+                                    R.drawable.ic_backspace_white_24dp);
+        view.setOnClickListener(swap? (v) -> enterClicked(v):
+                                      (v) -> backspaceClicked(v));
+        view.setOnLongClickListener((v) -> swap(v));
 
         display = new TextView[ROWS][];
         for (int i = 0; i < display.length; i++)
             display[i] = new TextView[SIZE];
 
-        ViewGroup grid = (ViewGroup) findViewById(R.id.puzzle);
+        ViewGroup grid = findViewById(R.id.puzzle);
         for (int i = 0; i < grid.getChildCount(); i++)
         {
             display[i / SIZE][i % SIZE] = (TextView) grid.getChildAt(i);
@@ -288,6 +331,48 @@ public class Gurgle extends Activity
             if (actionMode != null)
                 actionMode.finish();
         });
+
+        // Delay resizing
+        grid.postDelayed(() ->
+        {
+            float scaleX = (float) layout.getWidth() / grid.getWidth();
+            float scaleY = (float) (layout.getHeight() -
+                                    rows.getHeight()) / grid.getHeight();
+            float scale = Math.min(scaleX, scaleY);
+            for (int i = 0; i < grid.getChildCount(); i++)
+            {
+                TextView v = (TextView) grid.getChildAt(i);
+                v.setMinimumWidth(Math.round(v.getMinimumWidth() * scale));
+                v.setTextSize(TypedValue.COMPLEX_UNIT_PX,
+                              v.getTextSize() * scale);
+            }
+            scale = (float) layout.getWidth() / rows.getWidth();
+            for (int r = 0; r < rows.getChildCount(); r++)
+            {
+                ViewGroup row = (ViewGroup) rows.getChildAt(r);
+                for (int i = 0; i < row.getChildCount(); i++)
+                {
+                    View v = row.getChildAt(i);
+                    if (v instanceof TextView)
+                    {
+                        v.setMinimumWidth
+                            (Math.round(v.getMinimumWidth() * scale));
+                        ((TextView) v).setTextSize
+                            (TypedValue.COMPLEX_UNIT_PX,
+                             ((TextView) v).getTextSize() * scale);
+                    }
+                }
+            }
+        }, SWAP_DELAY);
+
+        konfettiView = findViewById(R.id.konfettiView);
+        EmitterConfig emitterConfig = new
+            Emitter(5, TimeUnit.SECONDS).perSecond(50);
+        party = new PartyFactory(emitterConfig)
+            .angle(Angle.TOP)
+            .spread(Spread.WIDE)
+            .setSpeedBetween(10, 30)
+            .build();
 
         actionModeCallback = new ActionMode.Callback()
         {
@@ -461,7 +546,9 @@ public class Gurgle extends Activity
         editor.putInt(PREF_LANG, language);
         editor.putInt(PREF_CONT, contains);
         editor.putInt(PREF_CORR, correct);
+        editor.putBoolean(PREF_CONF, confetti);
         editor.putBoolean(PREF_FARE, fanfare);
+        editor.putBoolean(PREF_SWAP, swap);
         editor.apply();
     }
 
@@ -519,6 +606,7 @@ public class Gurgle extends Activity
     @Override
     public boolean onPrepareOptionsMenu(Menu menu)
     {
+        menu.findItem(R.id.confetti).setChecked(confetti);
         menu.findItem(R.id.fanfare).setChecked(fanfare);
 
         return true;
@@ -617,6 +705,14 @@ public class Gurgle extends Activity
            setLanguage(DUTCH);
            break;
 
+        case R.id.afrikaans:
+           setLanguage(AFRIKAANS);
+           break;
+
+        case R.id.hungarian:
+            setLanguage(HUNGARIAN);
+            break;
+
         case R.id.getText:
             getText();
             break;
@@ -627,6 +723,10 @@ public class Gurgle extends Activity
 
         case R.id.help:
             help();
+            break;
+
+        case R.id.confetti:
+            confetti(item);
             break;
 
         case R.id.fanfare:
@@ -712,6 +812,26 @@ public class Gurgle extends Activity
             Bitmap bitmap = data.getParcelableExtra(DATA);
             decodeImage(bitmap);
         }
+    }
+
+    // onMenuItemClick
+    @Override
+    public boolean onMenuItemClick(MenuItem item)
+    {
+        // Get id
+        int id = item.getItemId();
+        switch (id)
+        {
+        // Help
+        case R.id.help:
+            help();
+            break;
+
+        default:
+            return false;
+        }
+
+        return true;
     }
 
     // addAccents
@@ -861,6 +981,9 @@ public class Gurgle extends Activity
                 mediaPlayer = MediaPlayer.create(this, R.raw.fanfare);
                 mediaPlayer.start();
             }
+
+            if (confetti)
+                konfettiView.start(party);
 
             showToast(R.string.congratulations, word);
             solved = true;
@@ -1196,9 +1319,9 @@ public class Gurgle extends Activity
     }
 
     // theme
-    private void theme(int c)
+    private void theme(int theme)
     {
-        theme = c;
+        this.theme = theme;
         if (Build.VERSION.SDK_INT != Build.VERSION_CODES.M)
             recreate();
     }
@@ -1354,6 +1477,13 @@ public class Gurgle extends Activity
 
         case DUTCH:
 		return "nl";
+
+        case AFRIKAANS:
+		return "af";
+
+        case HUNGARIAN:
+        	return "hu";
+
         }
     }
 
@@ -1404,7 +1534,22 @@ public class Gurgle extends Activity
         case DUTCH:
             getActionBar().setSubtitle(R.string.dutch);
             break;
+
+        case AFRIKAANS:
+            getActionBar().setSubtitle(R.string.afrikaans);
+            break;
+
+        case HUNGARIAN:
+            getActionBar().setSubtitle(R.string.hungarian);
+            break;
         }
+    }
+
+    // confetti
+    private void confetti(MenuItem item)
+    {
+        confetti = !confetti;
+        item.setChecked(confetti);
     }
 
     // fanfare
@@ -1421,13 +1566,23 @@ public class Gurgle extends Activity
         startActivity(intent);
     }
 
+    // swap
+    private boolean swap(View view)
+    {
+        swap = !swap;
+        if (Build.VERSION.SDK_INT != Build.VERSION_CODES.M)
+            recreate();
+
+        return true;
+    }
+
     // lock
     private boolean lock(View view)
     {
         if (((TextView) view).length() == 0)
             return true;
 
-        ViewGroup grid = (ViewGroup) view.getParent();
+        ViewGroup grid = findViewById(R.id.puzzle);
         if (grid.indexOfChild(view) / SIZE < row)
         {
             actionView = (TextView) view;
@@ -1455,7 +1610,7 @@ public class Gurgle extends Activity
             actionMode.finish();
 
         StringBuilder guess = new StringBuilder();
-        ViewGroup grid = (ViewGroup) view.getParent();
+        ViewGroup grid = findViewById(R.id.puzzle);
         int row = grid.indexOfChild(view) / SIZE;
 
         for (int col = 0; col < SIZE; col++)
@@ -1546,6 +1701,7 @@ public class Gurgle extends Activity
     }
 
     // showToast
+    @SuppressWarnings("deprecation")
     private void showToast(String text)
     {
         // Cancel the last one

@@ -6,6 +6,8 @@
   <string name="refresh">Refresh</string>
   <string name="share">Share</string>
   <string name="image">Image</string>
+  <string name="options">Options</string>
+  <string name="confetti">Confetti</string>
   <string name="fanfare">Fanfare</string>
   <string name="code">Code</string>
   <string name="qrCode">QR code</string>
@@ -15,6 +17,7 @@
   <string name="more">More</string>
 
   <string name="language">Language</string>
+  <string name="afrikaans">Afrikaans</string>
   <string name="english">English</string>
   <string name="italian">Italian</string>
   <string name="spanish">Spanish</string>
@@ -23,6 +26,7 @@
   <string name="portuguese">Portuguese</string>
   <string name="german">German</string>
   <string name="dutch">Dutch</string>
+  <string name="hungarian">Hungarian</string>
 
   <string name="theme">Theme</string>
   <string name="dark">Dark</string>
@@ -61,7 +65,8 @@
   href="https://github.com/PoorLazyCoder">PoorLazyCoder</a>\nFrench
   language and dictionary loader from <a
   href="https://github.com/tatref">tatref</a> and <a
-  href="http://www.lexique.org">Lexique</a>\n\nLicence <a
+  href="http://www.lexique.org">Lexique</a>\nConfetti from <a
+  href="https://github.com/DanielMartinus/Konfetti">Konfetti</a>\n\nLicence <a
   href="https://www.gnu.org/licenses/gpl.txt">GNU GPLv3</a>
   </string>
 

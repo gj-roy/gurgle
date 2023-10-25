@@ -6,6 +6,8 @@
   <string name="refresh">Aggiorna</string>
   <string name="share">Condividi</string>
   <string name="image">Immagine</string>
+  <string name="options">Opzioni</string>
+  <string name="confetti">Coriandoli</string>
   <string name="fanfare">Fanfara</string>
   <string name="code">Codice</string>
   <string name="qrCode">Codice QR</string>
@@ -15,6 +17,7 @@
   <string name="more">Più</string>
 
   <string name="language">Lingua</string>
+  <string name="afrikaans">Afrikaans</string>
   <string name="english">Inglese</string>
   <string name="italian">Italiano</string>
   <string name="spanish">Spagnolo</string>
@@ -23,6 +26,7 @@
   <string name="portuguese">Portoghese</string>
   <string name="german">Tedesco</string>
   <string name="dutch">Olandese</string>
+  <string name="hungarian">Ungherese</string>
 
   <string name="theme">Tema</string>
   <string name="dark">Scuro</string>
@@ -61,7 +65,8 @@
   href="https://github.com/PoorLazyCoder">PoorLazyCoder</a>\nTraduzione
   e dizionario francese da <a
   href="https://github.com/tatref">tatref</a> e <a
-  href="http://www.lexique.org">Lexique</a>\n\nLicenza <a
+  href="http://www.lexique.org">Lexique</a>\Coriandoli da <a
+  href="https://github.com/DanielMartinus/Konfetti">Konfetti</a>\n\nLicenza <a
   href="https://www.gnu.org/licenses/gpl.txt">GNU GPLv3</a>
   </string>
 

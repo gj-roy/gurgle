@@ -9,12 +9,17 @@
   <string name="options">Opzioni</string>
   <string name="confetti">Coriandoli</string>
   <string name="fanfare">Fanfara</string>
+  <string name="word">Parola predefinita</string>
+  <string name="dict">Dizionario</string>
+  <string name="aard2">Aard2</string>
+  <string name="quickdic">Quickdic</string>
+  <string name="wikt">Wictionary</string>
   <string name="code">Codice</string>
+  <string name="text">Testo</string>
   <string name="qrCode">Codice QR</string>
   <string name="getCode">Ottieni codice</string>
   <string name="enterCode">Inserisci codice</string>
   <string name="about">Informazioni</string>
-  <string name="more">Più</string>
 
   <string name="language">Lingua</string>
   <string name="afrikaans">Afrikaans</string>

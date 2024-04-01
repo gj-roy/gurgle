@@ -12,9 +12,11 @@ Fairly simple android word game.
 
 ## Guess those words
 Tap letters on the keyboard to enter a guess. Use the **Back** key to
-backspace. When you have finished a guess, tap the **Enter** key. If
-you have guessed the word correctly, a fanfare will play and a short
-message will appear. Tap the word for it's definition.
+backspace. Letters may also be entered by tapping a slot to select,
+then tapping a letter. This can also be used to change letters. When
+you have finished a guess, tap the **Enter** key. If you have guessed
+the word correctly, a fanfare will play and a short message will
+appear. Tap the word for it's definition.
 
 ## Display colours
 Letters which are in the word but in the wrong place will turn
@@ -51,6 +53,11 @@ checked that they haven't been used recently.
 ### Image
 Share an image of the current display.
 
+### Text
+Share the letters and colours of finished guesses. Select the
+[WordleSolver](https://github.com/billthefarmer/wordlesolver) app to
+pick the next guess.
+
 ### Code
 Display an alphanumeric code and a QR code which represents a new
 sequence of words to guess. This code may be shared with another copy
@@ -60,6 +67,20 @@ code button shares the alphanumeric code.
 
 ## Themes
 Select coloured theme from the **Theme** button in the toolbar.
+
+## Options
+ * **Confetti** &ndash; Select confetti display on guessing word.
+ * **Fanfare** &ndash; Select fanfare on guessing word.
+ * **Default word** &ndash; Select to enable default word. The first
+   word entered will become the default word entered at the beginning
+   of each game. Reset to clear word.
+
+## Dictionary
+Select the dictionary to look up a word meaning. Wiktionary (online)
+is built in, [Aard2](https://f-droid.org/en/packages/itkach.aard2/)
+and
+[Quickdic](https://f-droid.org/en/packages/de.reimardoeffinger.quickdic/)
+are apps which can be installed from [F-Droid](https://f-droid.org/).
 
 ## Language
 Select **Language** from the menu.

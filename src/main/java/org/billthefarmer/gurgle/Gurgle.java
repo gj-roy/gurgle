@@ -26,6 +26,7 @@ package org.billthefarmer.gurgle;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
+import android.app.SearchManager;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -56,6 +57,7 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.MotionEvent;
+import android.view.SubMenu;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
@@ -113,15 +115,19 @@ public class Gurgle extends Activity
 {
     public static final String TAG = "Gurgle";
     public static final String ROW = "row";
+    public static final String USE = "use";
     public static final String KEYS = "keys";
     public static final String DATA = "data";
-    public static final String WORD = "word";
     public static final String LANG = "lang";
+    public static final String WORD = "word";
+    public static final String FIRST = "first";
     public static final String SOLVED = "solved";
     public static final String LETTER = "letter";
     public static final String LOCKED = "locked";
     public static final String LETTERS = "letters";
     public static final String COLOURS = "colours";
+    public static final String EXTRA_TO = "to";
+    public static final String EXTRA_FROM = "from";
     public static final String KEY_COLOURS = "keyColours";
     public static final String GURGLE_IMAGE = "Gurgle.png";
     public static final String CODE_IMAGE = "Code.png";
@@ -129,14 +135,21 @@ public class Gurgle extends Activity
     public static final String IMAGE_JPG = "image/jpg";
     public static final String IMAGE_WILD = "image/*";
     public static final String TEXT_PLAIN = "text/plain";
+    public static final String PREF_FIRST = "pref_first";
     public static final String PREF_THEME = "pref_theme";
     public static final String PREF_WRONG = "pref_wrong";
     public static final String PREF_CONF = "pref_conf";
     public static final String PREF_CONT = "pref_cont";
     public static final String PREF_CORR = "pref_corr";
+    public static final String PREF_DICT = "pref_dict";
     public static final String PREF_FARE = "pref_fare";
     public static final String PREF_LANG = "pref_lang";
     public static final String PREF_SWAP = "pref_swap";
+    public static final String PREF_USE = "pref_use";
+
+    public static final String AARD2_LOOKUP = "aard2.lookup";
+    public static final String SEARCH_DICT =
+        "com.hughes.action.ACTION_SEARCH_DICT";
 
     public static final String FILE_PROVIDER =
         "org.billthefarmer.gurgle.fileprovider";
@@ -176,6 +189,10 @@ public class Gurgle extends Activity
     public static final int AFRIKAANS  = 8;
     public static final int HUNGARIAN  = 9;
 
+    public static final int WIKTIONARY = 0;
+    public static final int AARD2      = 1;
+    public static final int QUICKDIC   = 2;
+
     public static final int SIZE = 5;
     public static final int ROWS = 6;
 
@@ -190,11 +207,13 @@ public class Gurgle extends Activity
     private Map<String, TextView> keyboard;
     private KonfettiView konfettiView;
     private ActionMode actionMode;
+    private TextView selectedView;
     private TextView display[][];
     private TextView actionView;
     private Toolbar toolbar;
     private Toast toast;
     private String word;
+    private String first;
     private Party party;
 
     private boolean confetti;
@@ -202,6 +221,7 @@ public class Gurgle extends Activity
     private boolean locked[];
     private boolean solved;
     private boolean swap;
+    private boolean use;
 
     private int language;
     private int contains;
@@ -209,6 +229,7 @@ public class Gurgle extends Activity
     private int letter;
     private int theme;
     private int wrong;
+    private int dict;
     private int row;
 
     // On create
@@ -223,10 +244,13 @@ public class Gurgle extends Activity
         confetti = preferences.getBoolean(PREF_CONF, true);
         contains = preferences.getInt(PREF_CONT, getColour(YELLOW));
         correct = preferences.getInt(PREF_CORR, getColour(GREEN));
+        dict = preferences.getInt(PREF_DICT, WIKTIONARY);
         fanfare = preferences.getBoolean(PREF_FARE, true);
+        first = preferences.getString(PREF_FIRST, "");
         language = preferences.getInt(PREF_LANG, ENGLISH);
         swap = preferences.getBoolean(PREF_SWAP, false);
         theme = preferences.getInt(PREF_THEME, DARK);
+        use = preferences.getBoolean(PREF_USE, false);
         wrong = preferences.getInt(PREF_WRONG, getColour(GREY));
 
         switch (theme)
@@ -414,7 +438,9 @@ public class Gurgle extends Activity
         if (savedInstanceState != null)
         {
             row = savedInstanceState.getInt(ROW);
+            use = savedInstanceState.getBoolean(USE);
             word = savedInstanceState.getString(WORD);
+            first = savedInstanceState.getString(FIRST);
             letter = savedInstanceState.getInt(LETTER);
             solved = savedInstanceState.getBoolean(SOLVED);
             locked = savedInstanceState.getBooleanArray(LOCKED);
@@ -480,6 +506,16 @@ public class Gurgle extends Activity
             }
         }
 
+        // Fill in default word
+        if (use && first != null && !first.isEmpty())
+        {
+            for (int i = 0; i < first.length(); i++)
+            {
+                TextView text = display[0][i];
+                text.setText(first.substring(i, i+1));
+            }
+        }
+
         word = Words.getWord();
 
         locked = new boolean[SIZE];
@@ -541,14 +577,17 @@ public class Gurgle extends Activity
             PreferenceManager.getDefaultSharedPreferences(this);
         SharedPreferences.Editor editor = preferences.edit();
 
-        editor.putInt(PREF_THEME, theme);
-        editor.putInt(PREF_WRONG, wrong);
-        editor.putInt(PREF_LANG, language);
         editor.putInt(PREF_CONT, contains);
         editor.putInt(PREF_CORR, correct);
+        editor.putInt(PREF_DICT, dict);
+        editor.putInt(PREF_LANG, language);
+        editor.putInt(PREF_THEME, theme);
+        editor.putInt(PREF_WRONG, wrong);
+        editor.putString(PREF_FIRST, first);
         editor.putBoolean(PREF_CONF, confetti);
         editor.putBoolean(PREF_FARE, fanfare);
         editor.putBoolean(PREF_SWAP, swap);
+        editor.putBoolean(PREF_USE, use);
         editor.apply();
     }
 
@@ -559,10 +598,15 @@ public class Gurgle extends Activity
         super.onSaveInstanceState(outState);
 
         outState.putInt(ROW, row);
+        outState.putBoolean(USE, use);
         outState.putString(WORD, word);
+        outState.putString(FIRST, first);
         outState.putInt(LETTER, letter);
         outState.putBoolean(SOLVED, solved);
         outState.putBooleanArray(LOCKED, locked);
+
+        if (selectedView != null)
+            selectedView.setText("");
 
         ArrayList<String> letterList = new ArrayList<String>();
         ArrayList<Integer> colourList = new ArrayList<Integer>();
@@ -608,6 +652,16 @@ public class Gurgle extends Activity
     {
         menu.findItem(R.id.confetti).setChecked(confetti);
         menu.findItem(R.id.fanfare).setChecked(fanfare);
+        menu.findItem(R.id.word).setChecked(use);
+
+        MenuItem item = menu.findItem(R.id.dict);
+        if (item.hasSubMenu())
+        {
+            SubMenu submenu = item.getSubMenu();
+            item = submenu.getItem(dict);
+            if (item != null)
+                item.setChecked(true);
+        }
 
         return true;
     }
@@ -635,6 +689,10 @@ public class Gurgle extends Activity
 
         case R.id.image:
             shareImage();
+            break;
+
+        case R.id.text:
+            shareText();
             break;
 
         case R.id.code:
@@ -731,6 +789,22 @@ public class Gurgle extends Activity
 
         case R.id.fanfare:
             fanfare(item);
+            break;
+
+        case R.id.word:
+            word(item);
+            break;
+
+        case R.id.aard2:
+            aard2(item);
+            break;
+
+        case R.id.quickdic:
+            quickdic(item);
+            break;
+
+        case R.id.wikt:
+            wikt(item);
             break;
 
         case R.id.highlight:
@@ -882,12 +956,6 @@ public class Gurgle extends Activity
     // decodeImage
     private boolean decodeImage(Bitmap bitmap)
     {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N)
-        {
-            showToast(R.string.notRecognised);
-            return false;
-        }
-
         int width = bitmap.getWidth();
         int height = bitmap.getHeight();
 
@@ -936,6 +1004,14 @@ public class Gurgle extends Activity
             return;
         }
 
+        if (selectedView != null)
+        {
+            CharSequence s = ((TextView)v).getText();
+            selectedView.setText(s);
+            selectedView = null;
+            return;
+        }
+
         if (letter < SIZE)
         {
             while (letter < SIZE && locked[letter])
@@ -973,6 +1049,11 @@ public class Gurgle extends Activity
             showToast(R.string.notListed);
             return;
         }
+
+        // Save default word
+        if (use && row == 0 &&
+            ((first != null && first.isEmpty()) || first == null))
+            first = guess.toString();
 
         if (word.contentEquals(guess))
         {
@@ -1090,6 +1171,16 @@ public class Gurgle extends Activity
         for (TextView t: keyboard.values().toArray(new TextView[0]))
                 t.setTextColor(getColour(WHITE));
 
+        // Fill in default word
+        if (use && first != null && !first.isEmpty())
+        {
+            for (int i = 0; i < first.length(); i++)
+            {
+                TextView text = display[0][i];
+                text.setText(first.substring(i, i+1));
+            }
+        }
+
         word = Words.getWord();
 
         locked = new boolean[SIZE];
@@ -1129,6 +1220,64 @@ public class Gurgle extends Activity
         if (BuildConfig.DEBUG)
             intent.putExtra(Intent.EXTRA_TEXT, word);
 
+        startActivity(Intent.createChooser(intent, null));
+    }
+
+    // shareText
+    private void shareText()
+    {
+        StringBuilder builder = new StringBuilder();
+        // Green letters
+        for (int c = 0; c < SIZE; c++)
+        {
+            String letter = ".";
+            for (int r = 0; r < row; r++)
+            {
+                TextView text = display[r][c];
+                if (text.getTextColors().getDefaultColor() == correct)
+                {
+                    letter = text.getText().toString();
+                    continue;
+                }
+            }
+
+            builder.append(letter);
+        }
+
+        builder.append(",");
+        // Yellow letters, one row
+        for (int c = 0; c < SIZE; c++)
+        {
+            String letter = ".";
+            for (int r = row - 1; r > -1; r--)
+            {
+                TextView text = display[r][c];
+                if (text.getTextColors().getDefaultColor() == contains)
+                {
+                    letter = text.getText().toString();
+                    continue;
+                }
+            }
+
+            builder.append(letter);
+        }
+
+        builder.append(",,,");
+        // Grey letters
+        for (int c = 0; c < SIZE; c++)
+        {
+            for (int r = 0; r < row; r++)
+            {
+                TextView text = display[r][c];
+                if (text.getTextColors().getDefaultColor() == wrong)
+                    builder.append(text.getText());
+            }
+        }
+
+        // Send intent
+        Intent intent = new Intent(Intent.ACTION_SEND);
+        intent.putExtra(Intent.EXTRA_TEXT, builder.toString());
+        intent.setType(TEXT_PLAIN);
         startActivity(Intent.createChooser(intent, null));
     }
 
@@ -1559,6 +1708,38 @@ public class Gurgle extends Activity
         item.setChecked(fanfare);
     }
 
+    // word
+    private void word(MenuItem item)
+    {
+        use = !use;
+        item.setChecked(use);
+
+        // Clear default word
+        if (!use)
+            first = null;
+    }
+
+    // aard2
+    private void aard2(MenuItem item)
+    {
+        dict = AARD2;
+        item.setChecked(true);
+    }
+
+    // quickdic
+    private void quickdic(MenuItem item)
+    {
+        dict = QUICKDIC;
+        item.setChecked(true);
+    }
+
+    // wikt
+    private void wikt(MenuItem item)
+    {
+        dict = WIKTIONARY;
+        item.setChecked(true);
+    }
+
     // help
     private void help()
     {
@@ -1603,6 +1784,30 @@ public class Gurgle extends Activity
         return true;
     }
 
+    // select
+    private void select(View view)
+    {
+        ViewGroup grid = findViewById(R.id.puzzle);
+        if (grid.indexOfChild(view) / SIZE != row)
+        {
+            showToast(R.string.finish);
+            return;
+        }
+
+        int col = grid.indexOfChild(view) % SIZE;
+        if (locked[col])
+        {
+            showToast(R.string.finish);
+            return;
+        }
+
+        if (selectedView != null)
+            selectedView.setText("");
+
+        selectedView = (TextView) view;
+        selectedView.setText("_");
+    }
+
     // search
     private void search(View view)
     {
@@ -1618,7 +1823,7 @@ public class Gurgle extends Activity
 
         if (guess.length() != SIZE)
         {
-            showToast(R.string.finish);
+            select(view);
             return;
         }
 
@@ -1628,11 +1833,43 @@ public class Gurgle extends Activity
             return;
         }
 
-        // Start the web search
-        Intent intent = new Intent(this, Search.class);
-        intent.putExtra(WORD, guess.toString().toLowerCase(Locale.getDefault()));
-        intent.putExtra(LANG, languageToString(language));
-        startActivity(intent);
+        // Check dictionary
+        Intent intent;
+        switch (dict)
+        {
+        case AARD2:
+            // Start Aard2 search
+            intent = new Intent(AARD2_LOOKUP);
+            intent.putExtra(Intent.EXTRA_TEXT,
+                            guess.toString().toLowerCase(Locale.getDefault()));
+            if (intent.resolveActivity(getPackageManager()) != null)
+            {
+                startActivity(intent);
+                break;
+            }
+
+        case QUICKDIC:
+            // Start quickdic search
+            intent = new Intent(SEARCH_DICT);
+            intent.putExtra(SearchManager.QUERY,
+                            guess.toString().toLowerCase(Locale.getDefault()));
+            intent.putExtra(EXTRA_FROM, languageToString(language));
+            intent.putExtra(EXTRA_TO, Locale.getDefault().getLanguage());
+            if (intent.resolveActivity(getPackageManager()) != null)
+            {
+                startActivity(intent);
+                break;
+            }
+
+        default:
+        case WIKTIONARY:
+            // Start the web search
+            intent = new Intent(this, Search.class);
+            intent.putExtra(WORD,
+                            guess.toString().toLowerCase(Locale.getDefault()));
+            intent.putExtra(LANG, languageToString(language));
+            startActivity(intent);
+        }
     }
 
     // about
@@ -1659,7 +1896,7 @@ public class Gurgle extends Activity
 
         // Add the buttons
         builder.setPositiveButton(android.R.string.ok, null);
-        builder.setNeutralButton(R.string.more, (d, i) ->
+        builder.setNeutralButton(R.string.help, (d, i) ->
         {
             showToast(word);
             solved = true;
